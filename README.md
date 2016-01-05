@@ -14,7 +14,7 @@ resources (such as socket bindings and thread pools) and manage it using WildFly
 
 # Integration with WildFly Core
 
-* copy `src/main/modules` directory to `$WFLYCORE_HOME/modules` directory.
+* copy `extension/src/main/resources/modules` directory to `$WFLYCORE_HOME/modules` directory.
 * start WildFly core: `./bin/standalone.sh`
 * add the extension using WildFly CLI : `/extension=net.jmesnil.telnet.extension:add(module=net.jmesnil.telnet.extension)`
 * add the subsystem: `/subsystem=telnet:add()`
