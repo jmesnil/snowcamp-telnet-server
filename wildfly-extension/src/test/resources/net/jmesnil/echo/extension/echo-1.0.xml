@@ -1,0 +1,4 @@
+<subsystem xmlns="urn:net.jmesnil:domain:echo:1.0">
+    <server name="server1" socket-binding="echo1"/>
+    <server name="server2" socket-binding="echo2" reverse="true" upper-case="true"/>
+</subsystem>

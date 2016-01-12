@@ -1,4 +1,0 @@
-<subsystem xmlns="urn:net.jmesnil:domain:telnet:1.0">
-    <server name="server1" socket-binding="telnet1"/>
-    <server name="server2" socket-binding="telnet2" reverse="true" upper-case="true"/>
-</subsystem>
