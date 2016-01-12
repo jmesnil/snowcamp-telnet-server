@@ -26,15 +26,21 @@ import static org.jboss.dmr.ModelType.BOOLEAN;
 
 import java.util.Arrays;
 import java.util.Collection;
+import java.util.Set;
 
+import net.jmesnil.echo.EchoServer;
 import org.jboss.as.controller.AbstractAddStepHandler;
 import org.jboss.as.controller.AbstractRemoveStepHandler;
+import org.jboss.as.controller.AbstractRuntimeOnlyHandler;
+import org.jboss.as.controller.AbstractWriteAttributeHandler;
 import org.jboss.as.controller.AttributeDefinition;
 import org.jboss.as.controller.OperationContext;
 import org.jboss.as.controller.OperationFailedException;
 import org.jboss.as.controller.PersistentResourceDefinition;
+import org.jboss.as.controller.ReloadRequiredWriteAttributeHandler;
 import org.jboss.as.controller.SimpleAttributeDefinition;
 import org.jboss.as.controller.SimpleAttributeDefinitionBuilder;
+import org.jboss.as.controller.StringListAttributeDefinition;
 import org.jboss.as.controller.access.management.SensitiveTargetAccessConstraintDefinition;
 import org.jboss.as.controller.capability.RuntimeCapability;
 import org.jboss.as.controller.descriptions.ModelDescriptionConstants;
@@ -46,6 +52,7 @@ import org.jboss.as.network.SocketBinding;
 import org.jboss.dmr.ModelNode;
 import org.jboss.dmr.ModelType;
 import org.jboss.msc.service.Service;
+import org.jboss.msc.service.ServiceController;
 import org.jboss.msc.service.ServiceName;
 
 /**
@@ -74,6 +81,9 @@ public class ServerDefinition extends PersistentResourceDefinition {
             .setDefaultValue(new ModelNode(false))
             .setAllowNull(true)
             .build();
+    static AttributeDefinition CLIENTS = new StringListAttributeDefinition.Builder("clients")
+            .setStorageRuntime()
+            .build();
 
     private ServerDefinition() {
         super(EchoExtension.SERVER_PATH,
@@ -89,6 +99,16 @@ public class ServerDefinition extends PersistentResourceDefinition {
     @Override
     public Collection<AttributeDefinition> getAttributes() {
         return Arrays.asList(ATTRIBUTES);
+    }
+
+    @Override
+    public void registerAttributes(ManagementResourceRegistration resourceRegistration) {
+        ReloadRequiredWriteAttributeHandler defaultHandler = new ReloadRequiredWriteAttributeHandler(getAttributes());
+
+        resourceRegistration.registerReadWriteAttribute(SOCKET_BINDING, null, defaultHandler);
+        resourceRegistration.registerReadWriteAttribute(UPPER_CASE, null, UpperCaseWriteHandler.INSTANCE);
+        resourceRegistration.registerReadWriteAttribute(REVERSE, null, ReverseWriteHandler.INSTANCE);
+        resourceRegistration.registerReadOnlyAttribute(CLIENTS, ClientsAttributeHandler.INSTANCE);
     }
 
     @Override
@@ -121,5 +141,79 @@ public class ServerDefinition extends PersistentResourceDefinition {
 
     private static class ServerRemove extends AbstractRemoveStepHandler {
 
+    }
+
+    private static class ClientsAttributeHandler extends AbstractRuntimeOnlyHandler {
+
+        static final ClientsAttributeHandler INSTANCE = new ClientsAttributeHandler();
+
+        @Override
+        protected void executeRuntimeStep(OperationContext context, ModelNode operation) throws OperationFailedException {
+            String name = context.getCurrentAddressValue();
+            ServiceController<EchoServer> service = (ServiceController<EchoServer>) context.getServiceRegistry(false).getService(EchoService.SERVER.append(name));
+            EchoServer echoServer = service.getValue();
+            Set<String> clients = echoServer.getClients();
+            ModelNode result = new ModelNode();
+            result.setEmptyList();
+            for (String client : clients) {
+                result.add(client);
+            }
+            context.getResult().set(result);
+
+        }
+    }
+
+    private static class ReverseWriteHandler extends AbstractWriteAttributeHandler {
+        static final ReverseWriteHandler INSTANCE = new ReverseWriteHandler();
+
+        @Override
+        protected boolean applyUpdateToRuntime(OperationContext context, ModelNode operation, String attributeName, ModelNode resolvedValue, ModelNode currentValue, AbstractWriteAttributeHandler.HandbackHolder handbackHolder) throws OperationFailedException {
+            String name = context.getCurrentAddressValue();
+            boolean reverse = resolvedValue.asBoolean();
+
+            ServiceController<EchoServer> service = (ServiceController<EchoServer>) context.getServiceRegistry(false).getService(EchoService.SERVER.append(name));
+            EchoServer echoServer = service.getValue();
+            echoServer.setReverse(reverse);
+
+            return false;
+        }
+
+        @Override
+        protected void revertUpdateToRuntime(OperationContext context, ModelNode operation, String attributeName, ModelNode valueToRestore, ModelNode valueToRevert, Object handback) throws OperationFailedException {
+            String name = context.getCurrentAddressValue();
+            boolean reverse = valueToRestore.asBoolean();
+
+            ServiceController<EchoServer> service = (ServiceController<EchoServer>) context.getServiceRegistry(false).getService(EchoService.SERVER.append(name));
+            EchoServer echoServer = service.getValue();
+            echoServer.setReverse(reverse);
+        }
+    }
+
+
+    private static class UpperCaseWriteHandler extends AbstractWriteAttributeHandler {
+
+        static final UpperCaseWriteHandler INSTANCE = new UpperCaseWriteHandler();
+
+        @Override
+        protected boolean applyUpdateToRuntime(OperationContext context, ModelNode operation, String attributeName, ModelNode resolvedValue, ModelNode currentValue, HandbackHolder handbackHolder) throws OperationFailedException {
+            String name = context.getCurrentAddressValue();
+            boolean upperCase = resolvedValue.asBoolean();
+
+            ServiceController<EchoServer> service = (ServiceController<EchoServer>) context.getServiceRegistry(false).getService(EchoService.SERVER.append(name));
+            EchoServer echoServer = service.getValue();
+            echoServer.setUpperCase(upperCase);
+
+            return false;
+        }
+
+        @Override
+        protected void revertUpdateToRuntime(OperationContext context, ModelNode operation, String attributeName, ModelNode valueToRestore, ModelNode valueToRevert, Object handback) throws OperationFailedException {
+            String name = context.getCurrentAddressValue();
+            boolean upperCase = valueToRestore.asBoolean();
+
+            ServiceController<EchoServer> service = (ServiceController<EchoServer>) context.getServiceRegistry(false).getService(EchoService.SERVER.append(name));
+            EchoServer echoServer = service.getValue();
+            echoServer.setUpperCase(upperCase);
+        }
     }
 }

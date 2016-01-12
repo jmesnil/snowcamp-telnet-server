@@ -28,6 +28,8 @@ import java.io.PrintWriter;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.net.SocketException;
+import java.util.HashSet;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.ExecutorService;
@@ -115,6 +117,7 @@ class EchoServerImpl implements EchoServer {
     public void stop() {
         executor.shutdown();
         try {
+            closeClients();
             socket.close();
         } catch (IOException e) {
             e.printStackTrace();
@@ -133,6 +136,10 @@ class EchoServerImpl implements EchoServer {
         clientSockets.clear();
     }
 
+    public Set<String> getClients() {
+        return new HashSet<>(clientSockets.keySet());
+
+    }
     public static void main(String[] args) throws IOException {
         ServerSocket socket = new ServerSocket(9999);
         ExecutorService executor = Executors.newFixedThreadPool(5);
