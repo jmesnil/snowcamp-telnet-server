@@ -97,7 +97,9 @@ class EchoServerImpl implements EchoServer {
                                         out.println(line);
                                     }
                                 } catch (IOException e) {
-                                    e.printStackTrace();
+                                    if (!s.isClosed()) {
+                                        e.printStackTrace();
+                                    }
                                 }
                             }
                         });
